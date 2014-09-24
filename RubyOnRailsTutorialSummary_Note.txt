@@ -1,0 +1,1274 @@
+﻿Ruby on Rails 3 Tutorial Summary
+
+
+Ch01 From zero to deploy
+
+
+1.1 Introduction
+- a lot of companies using Rails
+- strategies for different readers
+- scaling Rails
+  you scale your site, not the framework
+  Rails is just a tool/framework
+
+
+1.2 Up and Running
+- IDE
+- RVM 
+  * install git first  http://code.google.com/p/git-osx-installer/downloads/detail?name=git-1.7.5.4-i386-leopard.dmg&can=3&q=
+  * install rvm
+    (install rvm)
+    bash < <(curl -s https://rvm.beginrescueend.com/install/rvm)
+    (make it available to terminal bash)
+    echo '[[ -s "$HOME/.rvm/scripts/rvm" ]] && . "$HOME/.rvm/scripts/rvm" # Load RVM function' >> ~/.bash_profile
+    (reload shell configuration)
+    user$ source .bash_profile
+- Install both ruby 1.8.7 and 1.9.2
+  * you have install XCode first ...
+  * rvm get head
+    rvm reload
+    rvm install 1.8.7
+    rvm install 1.9.2
+- set up RubyGems
+  * if using RVM, gem has already been setup
+  * force not to install ri and rdoc
+    - modify .gemrc file (listing 1.1)
+- install rails
+  gem install rails --version 3.0.9
+- create first application
+  rails new first_app
+- create Gemfile (for bundler to use)
+- run local server
+  rails server
+- MVC introduction
+
+
+1.3 Version control with git
+- configure git
+- first time init
+- .gitignore
+- git add .
+  git log
+- github
+
+
+1.4 Deploying
+- gem install heroku
+- heroku keys:add
+- ...
+- heroku open
+
+
+
+
+Chapter 2 A Demo App
+
+
+  2.1 Planning - set up the project code base, model user, model microscope
+  2.2 User resource
+    - Model user as a resource with scaffolding
+    - generate scaffold
+      rails generate scaffold User name:string email:string
+    - no need to specify id:int 
+      no need to specify created_at:datetime updated_at:datetime
+    - now, make db change
+      rake db:migration
+      rake -T db (find a list of database tasks)
+      rake -T (list of all tasks)
+    - scaffolding allow the following HTTP actions
+      /users          index
+      /users/1        show 
+      /users/new      new
+      /users/1/edit   edit
+    - scaffolding 
+      - create the following line in config/routes.rb
+        resource :users
+      - create the following methods in users_controller.rb
+        (actions that show pages) index, show, new, edit
+        (actions that do things) create, update, destroy
+    - RESTFUL map to url to actions
+      GET      /users          index
+      GET      /users/1        show
+      GET      /users/new      new
+      POST     /users          create
+      GET      /users/1/edit   edit
+      PUT      /users/1        update
+      DELETE   /users/1        destroy
+    - Controller
+      - inherit from ApplicationController
+      - create @users from model
+      - the @users will be used by view
+    - Model
+      - inherit from ActiveRecord::Base
+    - View
+      - erb file
+      - helper methods
+      - getting links
+  2.3 Microposts
+    - Model microposts with scaffolding
+      rails generate scaffold Micropost content:string user_id:integer
+    - db migration
+      rake db:migration
+    - validation in model
+      validates :content, :length => { :maimum => 140 }
+    - associate user with microposts
+      in User 
+      has_many :microposts
+      in Micropost
+      belongs_to :user (singular form)
+    - (Harry's thought), wow, there is no database schem fo foreign key relationship
+      bold, very bold
+    - using rails console to play with the model and database ....
+    - Inheritance chain
+      Model > ActiveRecord::Base
+      Controller > ApplicationController > ActionController::Base
+  2.4 Deploy
+    git add.
+    git commit -am "comment"
+    git push
+    heroku create
+    git push heroku master
+    heroku rake db:migrate
+    - to push data over to heroku
+      gem install taps
+      heroku db:push
+
+
+Chapter 3 Mostly Static Pages
+
+
+- create sample applicaiton
+ rails new sample_app -T (use -T to not create the default unit tests)
+- Gemfile and bundle install
+ have a :development section that contains
+   - rspec-rails
+ and a test section that contains
+   - rspec
+   - webrat
+- use of RSpec
+ rails generate rspec:install (install the files needed for rspec to work with rails)
+- use markdown instead of default README file
+- Github as remote
+- optionally deploy to heroku
+
+
+3.1 Static pages
+
+
+ - truely static pages
+   exam public/index.html
+   create public/hello.html page and remove it
+ - static page with Rails' way
+   rails generate controller Pages home contact (create a Pages controller and add two actions (home and contact) to it)
+   the console gives us what are created:
+   - controller
+   - routes (pages/contact, pages/home)
+   - erb (app/views/pages folder, home.html.erb and contact.html.erb)
+   - rspec (controller spec, views/pages spec, two erb specs)
+   - helper (app/helpers/pages_helpers.rb, and spec helper)
+ - routes.rb file (map request to action)
+   get "pages/home"
+   get "pages/contact"
+
+
+3.2 Testing
+
+
+ - testing tool
+   RSpec
+ - Autotest: a tool that continuously run your test suite in the background
+   gem install autotest
+   gem install autotest-rails-pure
+   gem install autotest-fsevent (watch file changes)
+   gem install autotest-growl (report test result through growl)
+   configure autotest: by editing .autotest file
+ - what to test?
+   for view and helpers use integration test instead of using RSepc
+ - how to remove a file if the file is already in  git?
+   git rm -r spec/views
+ - run rspec/autotest
+   rspec spec (run all the specs under spec directory)
+   autotest (run all specs)
+ - use Spork to avoid reloading the entire Rails stack
+   gem 'spork' (add spork to Gemfile)
+   spork --bootstrap (bootstrap spork configuration)
+   edit RSpec configuration file (spec/spec_helper.rb) to add Spork.prefork stuff
+
+
+ - TDD about page
+   RED
+   - add a test for get 'about' in pages_controller_spec file
+     response.should be_success
+   - add render_views in page_controller_spec file to ensure that the pages are actually there
+   GREEN
+   - add 'about' action in controller
+   - add 'pages/about' route in routes.rb
+   - add the view erb file
+
+
+3.3 Refactor and make the pages more dynamic
+ - goals: pages should have consistent title
+ - add title test in controller spec
+   response.should have_selector("title", :content => "expected title content")
+ - get rid of layout file for now
+   rm app/views/layouts/application.html.erb
+ - create @title instance varialbe in controller
+ - create a layout file application.html.erb
+   use @title variable
+   use <%= yeild %> to render the actual action page
+   use <%= csrf_meta_tag %> to avoid cross site scripting
+   
+Chapter 4 Rails-Flavored Ruby
+- define function in application_helper.rb to be reused on all pages
+- adding style-sheet stuff to layout page
+ stylesheet_link_tag
+
+
+4.2 strings and methods
+ - interpolation
+   "#{var1} : #{var2}"
+ - module, a way to mix-in code
+ - rails handles some mix-in for us
+
+
+4.3 Data Sturctures
+ - Array
+   [elem1, elem2, ...]
+   lenth
+   sort, reverse, shuffle
+   << (push element into array)
+   join
+ - Range (and how to convert to array)
+   (0..9).to_a
+   ['a'..'z'].to_a
+ - blocks
+   (1..5).each { |i| puts 2 * i }
+   or written as
+   (1..5).each do |i|
+     puts 2 * i
+   end
+   - times
+   - map
+ - hash
+   user = { :first_name => "harry", :last_name => "chou" }
+ - symbol
+   :frist_name (think as string without all baggages
+   user[:first_name]
+ - nested hashes (hash within hash) - used heavily in rails
+   inspect method (return a string with a literal represtnation of the object)
+   in rail you can use p
+ - when hash is the last argument, the curly braces can be omitted
+
+
+4.4 Ruby classes
+ - constructor
+ - inheritance
+   s.class (get object's class)
+   s.class.superclass (get the parent class of current object's class)
+ - create a sepearea class
+   just modify existing class
+ - insepect Rails controller class
+   PagesController --> ApplciationController 
+    --> ActionController::Base --> ActionController::Metal ...
+ - attr_accessor
+   attr_accessor :name, :email (create getter and setter for @name and @email)
+ - initialize
+   default value
+         
+
+
+Chapter 5 Filling in the Layoute
+
+
+5.1 add structure
+- site navigation p159 has the code that
+- image_tag (Rails helper)
+- customize CSS
+- using partials
+ * _partial.html.erb
+ * <%= render 'partial' %>
+
+
+5.2 layout links
+- use link_to (rails helper function)
+- integration tests
+ * to create
+   rails generate integration_test layout_links
+ * need to add to .autotest for integration tests
+- modify routes
+ match '/contact', :to => 'pages#contact'
+- match also creates named routes for us
+ about_path ==> '/about'
+ about_url ===> 'http://servername//about'
+- match root url
+ root :to => 'pages#home'
+ also creates root_path and root_url
+
+
+5.3 User signup: first step
+- goal: show a page show user can signup (in REST term >> a new action)
+- create user resource
+ rails generate controller Users new
+- define tests
+ should be able to visit users/new
+ users/new should have right title
+- modify route
+ let '/signup' map to 'usres/new'
+ match '/signup', :to => 'usrs#new'
+
+
+5.4 conclusion
+
+
+Chapter 6 Modeling and Viewing Users - Part 1
+- data model
+- authentication module
+ - prebuilt? or make your own?
+ - Rails authentication framework: Clearance, Authlogic, Devise, and CanCan ...
+ - Standard-based solutions: OpenID, OAuth
+- we will build our own with REST architecture in mind
+- checkout and new branch and work from there
+ git checkout master
+ git checkout -b modeling-user
+
+
+6.1 User Model
+- overview
+ - Model
+ - Active Record
+ - migration strategy
+ - Rails insulate you from knowing database details
+- DB migration
+ - use rails generate model
+   generate model User name:string email:string
+   (only User, not Users)
+ - this command:
+   * create migration ruby file
+   * create user.rb model file
+   * create rspec file
+ - migration
+   rake db:migrate
+   * will run the migrations needed
+   * will create the additional fields (id, created_at, updated_at)
+ - to rollback
+   rake db:rollback (will execute the self.down section of code)
+- Model
+ - class User only inherit from ActiveRecord::Base and have everything we need
+ - to make it clear, we need to add comment to the model class
+   gem 'annotate-models', '1.0.4' (using Gemfile and bundle)
+ - to run annotate
+   annotate
+ - use attr_accessible for avoiding 'mass assignment' problem
+   attr_accessible :name, ;email (only allow setting :name and :email in 'mass assignment' way)
+- Create user objerct
+ - testing our model in sandbox environment
+   (this will make sure all modifications to the database are rollback upon exit)
+   rails consolde --sandbox
+ - to view raw SQL
+   $ tail -f log/development.log
+   (-f for follow, which will dynamically update the log in console. it's a good idea to always keep an open window for viewing SQL)
+ - User.new ==> create new user object
+ - user = User.new(:name => 'harry', :email => 'harrychou@test.com)
+ - user.save (received the id and updated_at/created_at dates)
+ - combine new and save
+   user = User.create(:name => 'name', 'email => 'email@email.com')
+ - user.detroy (delete the user, even destroyed the object is still in memory)
+- Finding User objects
+ * User.find(1)
+ * User.find_by_email('harry@test.com')
+ * User.first
+ * User.all
+- Updating
+ * user.email = 'new-email@test.com'
+ * user.save
+ * user.reload (reload the object from database, if save not called, all changes will be lost)
+ * user.update_attributes(:name = 'new name', :email => 'new email@test.com')
+   (this combines update and save)
+   (only attr_accessible attributes can do this)
+   (if you find your model reject updating certain columns, check the attr_accessible)
+
+
+6.2 User Validation
+- prepare database for testing
+ $ rake db:test:prepare (data model from  developmennt is reflected in the test database)
+- validate presence
+ validates :name, :presence => true
+- user.valid? to check whether the properties are valida for the object?
+- user.errors and user.errors.full_messages can tell the detail messages
+- TDD validation
+ * page 213
+   - before(:each) do ... specify correct attributes
+   - should create new instance ... just call User.create!(@attr)
+   - in each tests: create a new user and make sure whether it is valid or not
+     no_name_user = User.new(@attr.merge(:name => ""))
+     no_name_user.should_not be_valid
+- length validation
+ validates :name, :presence => true,
+                  :length => {:maximum => 50}
+ * use trick of "a" * 51
+- format validation
+ * to test
+   - specify a list of email address (valid or non-valid)
+     %w[emailaddr1 aet@te.com ddd.com]
+   - for each email address, try to create a user and make sure the user is valid or not valid
+ * to implement using regular expression
+   validates :email, :presence => true,
+                     :format => { :with => email_regex }
+ * use Rubular (online ruby regex tool)
+- validate uniqueness
+ * to test, make sure create! a user then create another user with the same email address
+ * to pass
+   validates :email, :presence => true,
+                     :format ...
+                     :uniqueness => { :case_sensitivte => false }
+ * it is still possible that enforce it in applicaiton level is not enough
+   we need to ensure uniqueness at db level
+   - db migration
+     rails generate migration add_email_uniqueness_index
+   - add the code in migration rb file
+     add_index :users, :email, :unique => true
+     ...
+     remove_index :users, :email
+
+
+6.3 Viewing users
+- REST style
+- adding debug messages to each page
+ in layout/applciation.html.erb add this to the end
+ <%= debug(params) if Rails.env.development? %>
+- by default rails s run in development environment
+ to run in other enviornment
+ rails s --environemtn production
+ (you need to create a database for production too ==> rake db:mgirate RAILS_ENV=production)
+- adding code in controller
+ @user = User.find(params[:id])
+- adding code in view
+- adding route information
+ resoruces :users
+ * allow REST style URL
+   /users            index       users_path       GET
+   /users/1          show        users_path(1)    GET
+   /users/new        new         new_user_path    GET
+   /users/           create      users_path       POST
+   /users/1/edit     edit        edit_user_path   GET
+   /users/1          update      users_path(1)    PUT
+   /users/1          destroy     users_path(1)    DELETE
+
+
+ 
+  Chapter 7 Modeling and Viewing Users - Part 2
+- road map for following chapter
+        * Ch7 - introducing 'password' attribute
+        * initial signup
+ * 9, signin
+ * migration, validations, virtual attributes, private methods, ActiveRecord callback
+- password, showing user profile
+- test with factories
+
+
+7.1 Insecure Passwords
+- don't save password in database
+- validate password
+ * use password and passsword_confirmation
+   we don't need to create password_confiramtion at all
+ * in user spec
+   - test correctly creating a new user
+     User.create!(@attr)
+   - require password
+   - reject short or long password
+- virtual attribute
+ only in memory but not in database column
+ use attr_accessor
+- use validation to auto-magically create a virtual attribute called password_confirmation
+ validates :password, :confirmation => true
+- if defined only in model, attr_accessor ... will be virtual (not in Active Record)
+- review: attr_accessible >> for allowing mass-update (the method view update the model)
+- lentgh range validation
+ validates :passwrod, :length => { :within => 6..40 }
+
+
+- password db migration
+ * strategy: create a separate attribute to password storage
+   virtual password is just source for encrypted password
+ * test --> make sure encrypted_password exists in user model
+   user.respond_to?(:encrypted_password)
+ * now, manually create a migration
+   $ rails generate migration add_password_to_users encrypted_password:string
+   - migratin will auto-magically create the code for you knowing that
+     * you want to add a column
+     * you want to add to users table
+     * the column you want to add is encrypted_password:string
+   - migrate and prepare test db
+     rake db:migrate
+     rake db:test:prepare
+ * how to run only one RSpec test? page 246
+
+
+- use ActiveRecord callback to auto-generate encrypted password
+ * before_save callback
+ * test
+   - make sure the encrypted_password is not blank after saving to db
+ * in User.rb
+   - add
+     before_save :encrypt_password
+   - implement encrypted_password as private method (all methods after 'private' are private methods)
+     self.encrypted_password = encrypt(password)
+     (assignment will create local varialble, so self.encrypted_password is necessary, while password don't need self) (????)
+
+
+7.2 Secure Passwords
+- secure one-way hash
+ * can only compare whether the provided password 'hashed-match' stored password
+- theory
+ * require 'digest', hash
+   - hash is in theory irreversible
+   - Digest::SHA2:hexdigest
+ * hash is still not secure, hacker can do 'rainbow attack' to try out all possible tests
+   - add salt to the password
+   - so the hacker not only need to know he hash method, but also the salt we use
+- add salt
+        * add migration for adding salt column to User
+ * create salt when first creating the user object
+ * save salt to DB
+- authenticate
+ * create class method for authentication
+   add self in front of method name
+
+
+7.3 Better User Views
+- test first, we need a way to create @user
+- use factory_girl_rails
+- to stub or not to stub
+- use the gravatar plugin
+- named routes are useful for view code
+
+
+
+
+7.4 Conclusion
+
+
+
+
+Chapter 8 Sign-Up
+
+
+- to reset database (clear out the one created in console)
+ bundle exec rake db:reset
+
+
+8.1 Signup form
+- test: should be able to show the form
+- using form_for
+
+
+<%= form_for(@user) do |f| %>
+ <div class="field">
+   <%= f.label :name %><br />
+   <%= f.text_field :name %>
+ </div>
+ <div class="field">
+   <%= f.label :email %><br />
+   <%= f.text_field :email %>
+ </div>
+ <div class="field">
+   <%= f.label :password %><br />
+   <%= f.password_field :password %>
+ </div>
+ <div class="field">
+   <%= f.label :password_confirmation, "Confirmation" %><br />
+   <%= f.password_field :password_confirmation %>
+ </div>
+ <div class="actions">
+   <%= f.submit "Sign up" %>
+ </div>
+<% end %>
+
+
+ - creating a new @user in controller
+ - the form filed has id as user_name and name as user[name]
+   the name part will be used to construct the params for controller to handle
+ - form tag has action to /users and method as post
+ - authenticity_token hidden field to avoid forgery         
+
+
+8.2 signup failure
+- test: use post to simulate the actual posting using fake data
+ test that the posted wrong data should not change the data
+ 
+it "should not create a user" do
+ lambda do
+   post :create, :user => @attr
+ end.should_not change(User, :count)
+end
+
+
+ * change is a RSpec method
+ * call should_not change around the lambda (the code that actually does things)
+
+
+- how params work
+ user[email], becomes params[:user] with :email key
+
+
+8.2.3 failed message
+
+
+- when user.save called but return false, user.errors will contain the error information
+- use partial to output error message
+
+
+<% if @user.errors.any? %>
+ <div id="error_explanation">
+   <h2><%= pluralize(@user.errors.count, "error") %>
+       prohibited this user from being saved:</h2>
+   <p>There were problems with the following fields:</p>
+   <ul>
+   <% @user.errors.full_messages.each do |msg| %>
+     <li><%= msg %></li>
+   <% end %>
+   </ul>
+ </div>
+<% end %>
+
+
+ * array count, empty?, any?
+ * ActionView::Helpers::TextHelper to pluralize
+ * The problem of logging password data
+   - Rails 3 filtered password in log file
+   - the configration of this feature is in config/application.rb
+
+
+8.3 successful signup
+
+
+- testing:
+ * fake success data and post to the create method
+ * make sure an user is created by
+
+
+     it "should create a user" do
+       lambda do
+         post :create, :user => @attr
+       end.should change(User, :count).by(1)
+     end
+
+
+ * make sure redirect to user's page
+
+
+     it "should redirect to the user show page" do
+       post :create, :user => @attr
+       response.should redirect_to(user_path(assigns(:user)))
+     end    
+
+
+- the actual code in controller
+
+
+ def create
+   @user = User.new(params[:user])
+   if @user.save
+     redirect_to @user
+   else
+     @title = "Sign up"
+     render 'new'
+   end
+ end
+
+
+8.3.3 the flash
+
+
+- to create a way to indicate success/failure temporarily (disappear after reload)
+- in Rails, we use the special vairable called flash
+ add in app/views/layouts/application.html.erb
+
+
+     <%= render 'layouts/header' %>
+     <section class="round">
+       <% flash.each do |key, value| %>
+         <div class="flash <%= key %>"><%= value %></div>
+       <% end %>
+       <%= yield %>
+     </section>
+
+
+- test: test the flash variable contains the correct data
+
+
+
+
+8.4 RSpec integration tests
+
+
+- we have not test the structure of the signup form
+- and, we have not test the submissions actually work
+
+
+- for testing page structure
+ * use render_views and have_selector
+
+
+- for submission, use RSpec to fill_in and click button
+
+
+     it "should not make a new user" do
+       visit signup_path
+       fill_in "Name",         :with => ""
+       fill_in "Email",        :with => ""
+       fill_in "Password",     :with => ""
+       fill_in "Confirmation", :with => ""
+       click_button
+       response.should render_template('users/new')
+       response.should have_selector("div#error_explanation")
+     end
+
+
+
+
+Chapter 9 sign-in, sign-out
+
+
+- allow users to sign-in and sign-out
+- session as a resource
+- security model
+
+
+9.1 Sessions
+
+
+- model session as a RESTful resource
+        - singin page -> new
+ - sucessful signin -> create
+ - signout -> destroy
+- unlike other resources, there is not DB for persistence
+ - cookies will be used to persist
+- create Session controller with new action
+ rails generate controller Sessions new
+- test: should see the signin page and the page has the right title
+- add routing
+ resources :sessions, :only => [:new, :create, :destroy]
+
+
+ match '/signin',  :to => 'sessions#new'
+ match '/signout', :to => 'sessions#destroy'
+
+
+- signin form
+ * user enter email and password
+ * there is no variable in controller so we do
+   form_for(:session, :url => sessions_path)
+
+
+<h1>Sign in</h1>
+
+
+<%= form_for(:session, :url => sessions_path) do |f| %>
+ <div class="field">
+   <%= f.label :email %><br />
+   <%= f.text_field :email %>
+ </div>
+ <div class="field">
+   <%= f.label :password %><br />
+   <%= f.password_field :password %>
+ </div>
+ <div class="actions">
+   <%= f.submit "Sign in" %>
+ </div>
+<% end %>
+
+
+<p>New user? <%= link_to "Sign up now!", signup_path %></p>
+
+
+9.2 Signin failure
+
+
+- handle failure situation first?
+- use params[:session][:email] and params[:session][:password] to retrieve the info
+- test: try to post withe incorrect password
+ * should re-render the signin page
+ * should have the right title
+ * should hava a flash error message
+- implementation
+        * flash vs. flash.now
+   - for re-directing (flash)
+   - for rendering (flash.now)
+
+
+9.3 signin success
+- signin success should redirect to user's profile page
+ * with different 'sign-in' UI
+- test
+ * use the Factory[:user) to create the sample user
+ * use the fake user's email and password to signin
+ * test: 1. the user should sign-in, 2. the page should redirect to profile page
+- problem with session as resource
+ * blur the line between MVC
+ * some code need to be in view and some in controller
+ * in Ruby, we use module to include the code in both controller and views
+ * in Rails, a module has already been included called SessionHelper
+ * all we need to do is inlcude it in ApplicationController (by default all views have access to SessionHelper already)
+   Listing 9.11
+- implement the sign_in(method)
+ * in SessionHelper module
+ * use cookies.permanent_signed[:remember_token] to persist cookie
+ * set the current_user variable
+- current_user
+ * create a current_user variable available to both views and controllers
+ * test: make sure the current_user variable is assigned
+         make sure the controller is marked as signed_in
+ * assign current_user: use assignment method (p. 347)
+ * retrieve current_user: use ||= (when @current_user is undefined, set it to user_from_remember_token)
+
+
+ def current_user
+   @current_user ||= user_from_remember_token
+ end
+
+
+ private
+
+
+   def user_from_remember_token
+     User.authenticate_with_salt(*remember_token)
+   end
+
+
+   def remember_token
+     cookies.signed[:remember_token] || [nil, nil]
+   end
+
+
+ * *remember is to allow two arguments to be passed in
+   the alternative would be pass-in an array, but it is not Ruby's way
+ * now the User model need to be able to authenticate_with_salt
+   (make sure we can find the cookie's user_id in db, and the salt in cookie is the same as the salt in db)
+
+
+9.4 Signing out
+
+
+- signout map to destroy action (DELETE http method)
+- test:
+ * a method to simulate sign_in
+ * after calling
+   delete :destroy
+   - verify controller is not signed_in
+   - and the user should be redirect to root page
+- p355, the code is so clean
+
+
+ def destroy
+   sign_out
+   redirect_to root_path
+ end
+
+
+- sign_out will delete cookie and set current_user to nil
+
+
+9.4.3 integration tests
+
+
+- integration test: in layout
+ check 'Sign in' link exists if user is not signed in
+ check 'Sign out' link exists if user is signed in
+
+
+- integration test for user
+ simulate actual failure signin and success signin
+
+
+9.5 conclusion
+
+
+
+
+Chapter 10 Update/Show/Delete Users
+
+
+- complete the REST actions for User resource
+ * user update their profile
+ * listing users for admin
+                - pagination, sample data
+ * delete users form admin
+
+
+10.1
+
+
+- REST actions:
+ edit => get the edit page
+ update => put to update
+to the update
+- enforce access to the edit page
+ use before filter
+
+
+- Edit form
+ * test: should be able to access, should have right title, should have a link to change gravatar
+ * the edit and new user views have duplicate -> should be put into a partial
+ * use f.object to be able to reuse error_message partial
+ * form_for will see if the @user is a new one new_record?
+   if true -> use post
+   if not true -> use put
+
+
+ * test for update
+   - if validation failed, should render the edit page again
+   - if validation works
+     should change the user's attributes (using @user.reload)
+     should redirect to user's show page
+     should have a flash message
+
+
+- require user to signin before accessing the edit page
+ * test: if user is not sign in, should deny access to GET edit page, and PUT update info
+ * use before_filter
+
+
+class UsersController < ApplicationController
+ before_filter :authenticate, :only => [:edit, :update]
+ .
+ .
+ .
+ private
+
+
+   def authenticate
+     deny_access unless signed_in?
+   end
+end
+
+
+module SessionsHelper
+ .
+ .
+ .
+ def deny_access
+   redirect_to signin_path, :notice => "Please sign in to access this page."
+ end
+ .
+ .
+ .
+end
+
+
+- require the current user to edit
+ * test: if not same user, redirect to root for edit and update actions
+ * code
+
+
+ before_filter :correct_user, :only => [:edit, :update]
+
+
+   def correct_user
+     @user = User.find(params[:id])
+     redirect_to(root_path) unless current_user?(@user)
+   end
+
+
+- convenience forwarding: if non-sign-in user signed_in, he should be redirected to the intended page
+ * test, simulate non-sign-in user, go to edit_user_path, then fillin signin email/pass, then verify the render_template
+ * code (use session to store the original target url)
+
+
+module SessionsHelper
+ .
+ .
+ .
+ def deny_access
+   store_location
+   redirect_to signin_path, :notice => "Please sign in to access this page."
+ end
+
+
+ def redirect_back_or(default)
+   redirect_to(session[:return_to] || default)
+   clear_return_to
+ end
+
+
+ private
+   .
+   .
+   .
+   def store_location
+     session[:return_to] = request.fullpath
+   end
+
+
+   def clear_return_to
+     session[:return_to] = nil
+   end
+end
+
+
+class SessionsController < ApplicationController
+ .
+ .
+ .
+ def create
+   user = User.authenticate(params[:session][:email],
+                            params[:session][:password])
+   if user.nil?
+     flash.now[:error] = "Invalid email/password combination."
+     @title = "Sign in"
+     render 'new'
+   else
+     sign_in user
+     redirect_back_or user
+   end
+ end
+ .
+ .
+ .
+end
+
+
+10.3 show a list of users
+- test: for non-signed-in users, should deny access
+ for signed-in users, should have access, and have right title, and have @users
+
+
+- load sample data
+ * in development DB
+ * use Faker gem
+
+
+- pagination
+ * use will_paginate
+ * use Factory Girl with sequencing to generate the test users
+
+
+- make user list item a partial
+ now Rails can automatically know to render @users and loop through each user object and call render user (Magic)
+
+
+10.4 Destroying users
+
+
+- only admin can do it
+ * test:
+   User model reponde to admin attribute
+ * rails automagically create admin? if admin attribute is boolean
+ * migration p401
+ * load sample data using Faker gem p402
+ * talked about restricting mass update on admin atrribute using toggle
+
+
+- destroy action
+ * add delete link that will send delete HTTP method p404
+
+
+- secure the delete
+ * test only signed-in, admin users can delete
+ 
+
+
+Chapter 11 Use Microposts
+
+
+- has_many, belongs_to
+- ordering of Microposts
+- auto-detruction of Microposts if User is deleted
+
+
+11.1 Model
+
+
+- rails generate model Micropost content:string user_id:string
+ * migration will be created
+ * timestamps will be created
+   - created_at
+   - updated_at
+ * run migration
+   rake db:migrate
+   rake db:test:prepare
+ * limit accessible attributes
+   (only the content should be allowed for updating through web)
+ * to set user_id of a micropost, we should set it through User
+- test user association
+ * user should have microposts attribute
+ * @user.microposts.create!(@attr) should work
+ * the created micropost should respond to :user and have the right user association
+- set in Micropost
+ belongs_to :user
+- set in User
+ has_many :microposts
+- to test the actual Micropost objects associated with user, we need Factory Girl to create microposts
+ 
+- By using the symbol ':user', we get Factory Girl to simulate the User model.
+Factory.define :user do |user|
+ user.name                  "Michael Hartl"
+ user.email                 "mhartl@example.com"
+ user.password              "foobar"
+ user.password_confirmation "foobar"
+end
+
+
+Factory.sequence :email do |n|
+ "person-#{n}@example.com"
+end
+
+
+Factory.define :micropost do |micropost|
+ micropost.content "Foo bar"
+ micropost.association :user
+end
+
+
+- Testing order of micropost
+- to give Micropost default ordering, we use default_scope
+ default_scope :order => 'microposts.created_at DESC'
+
+
+- Testing for auto-delete when User is detroyed
+- to make it work, in User model
+ has_many :microposts, :dependent => :destroy
+
+
+- validation of Mciropost
+ * test: require user_id, require non-blank content, reject long content
+
+
+11.2 Show Mciroposts
+
+
+- add the mciroposts in User's show page
+- test: should show micropost on user's show page
+- add pagination
+- view stuff ...
+
+
+- create sample micropost in development db
+ * only add to first 6 users, User.all(:limit => 6)
+ * Faker::Lorem.sentence to genreate LoremIpsum content
+
+
+11.3 Create/Delete Microposts
+
+
+- only have :create and :destroy for micropost resource
+ * there are no edit and update
+ * the new form is not addressable through micropost, it is in user's show page
+- setting routes
+ resources :microposts, :only => [:create, :destroy]
+
+
+- access control
+ * only singed-in user can create and destroy
+ * test: make sure un-signed_in user cannot access these two actions
+ * use before_filter :authenticate to achieve it
+
+
+- new micropost form will reside in Home page
+ * test
+ * microposts_controller --> implement create
+ * homt.html.erb --> add alternative form for signed-in users
+ * ...
+
+
+- status feed (showing all user's feed and followings feeds (not until Ch12)
+ * test
+   user should have :feed
+   @user.feed.include?(micropots)
+   @user.feed no include other user's feed
+ * implment user.feed
+   use Micropost.where("user_id ...) page447
+ * add feed_items to page_controller's home action
+
+
+- destroy micropost
+ * add delete link
+
+
+- create integration test to simulate user trying failed and successful micropost
+
+
+Chapter 12 Following Users
+
+
+- social layer: follow, unfollow other users
+- include following users' posts on home page
+- some Ruby/SQL trickery
+
+
+12.1 relationship model
+
+
+- many to many with the same entity (user)
+- model discussion, settled with creating a Relationship entity
+ * rails generate model Relationship follower_id:integer follwed_id:integer
+ * migration p468
+- when adding following relationship, always start from follower to add relationship
+ * make followed_id as only accessible property (so the malicious users can not force other people to follow them)
+- user has_many relationships
+ a relationship belong to one follower and one followed user
+
+
+- test:
+ you can create a new Relationship (in Relationship)
+ the user can access relationships (in User)
+- has_many
+ has_many (in User) has_many :relationsips, :foreign_key => "followed_id"
+ belongs_to (in Relationship) belongs_to :follower_id, :class_name => "User"
+                              belongs_to :followed_id, :class_name => "User"
+- validation: should require both followed_id and follower_id
+
+
+12.1.4 Following
+
+
+- create following relationship (so we can query the following users directly using user.following ...
+ has_many :following, :through => :relationships, :source => :followed
+- create a follow! method for following another user
+- create a follow? method for query whether the user follow another user
+- create a unfollow! method
+
+
+12.1.5 Followers
+
+
+- same as above: (specify class_name for clarification)
+ has_many :reverse_relationships, :foreign_key => "followed_id",
+                                  :class_name => "Relationship",
+                                  :dependent => :destroy
+ has_many :followers, :through => :reverse_relationships, :source => :follower
+
+
+12.2 Web Interface
+
+
+- create sample data (p.483)
+
+
+- for showing followers and followings
+ create nested routes (see p.485)
+
+
+- nested routes for showing /users/1/following and /users/1/followers
+ see page 485, use :member method inside resorces block in routes.rb
+
+
+- for showing users/tigers, you need to use collection (also on p.485)
+
+
+- test for making sure when getting home page, if signed in, counts of following and followers are displayed on page
+
+
+- implementation, use html table now (later for Ajax updates)
+
+
+... follow/unfollow button with post back
+
+
+... follow/unfollow button with Ajax
+
+
+... show Status feed (the home page)
+
+
+(the sequence the author tries to progress is quite interesting) ...
